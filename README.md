@@ -1,4 +1,4 @@
-# Pràctica: Repository, lògica de negoci i MVC
+# Pràctica: patró Repository, lògica de negoci i MVC
 
 Basat en el document [Implementing the Repository and Unit of Work Patterns in an ASP.NET MVC Application](https://learn.microsoft.com/en-us/aspnet/mvc/overview/older-versions/getting-started-with-ef-5-using-mvc-4/implementing-the-repository-and-unit-of-work-patterns-in-an-asp-net-mvc-application)
 
@@ -16,6 +16,21 @@ MVC → Lògica de negoci → Repositori → Base de dades
 
 La capa MVC només ha d'orquestrar peticions HTTP i respostes HTML. Les regles de negoci han de viure a la capa de negoci. El repositori només s'ha d'encarregar de persistir i recuperar dades.
 
+## Què és el patró Repository en aquesta pràctica?
+
+El patró **Repository** crea una abstracció entre el codi que necessita dades i el mecanisme concret que les desa. En aquest projecte, la capa de negoci no parla amb Entity Framework Core ni amb SQLite: parla amb `IRepositoriAlumne`.
+
+```text
+LogicaNegociAlumne → IRepositoriAlumne → RepositoriAlumne → AlumnesDbContext → SQLite
+```
+
+Això té dues conseqüències importants:
+
+* La lògica de negoci expressa casos d'ús (`AfegirAsync`, `CanviarDadesAsync`, `PromocionarAsync`, etc.) sense conèixer la base de dades.
+* El repositori expressa operacions de persistència (`ObtenirPerIdAsync`, `LlistaAlumnesAsync`, `AfegirAlumneAsync`, `ActualitzarAlumneAsync`, `EsborrarAlumneAsync`) sense decidir regles de negoci.
+
+Per això **promocionar un alumne no és responsabilitat del repositori**. El repositori pot carregar i desar alumnes; la regla de si un alumne passa de curs o finalitza els estudis pertany a `LogicaDeNegoci`.
+
 ## Aplicació
 
 Farem una aplicació [CRUD](https://ca.wikipedia.org/wiki/Crear,_llegir,_actualitzar_i_esborrar) i a més tindrà una operació de negoci:
@@ -32,7 +47,7 @@ Farem una aplicació [CRUD](https://ca.wikipedia.org/wiki/Crear,_llegir,_actuali
 Crearem els projectes on posar estructures de dades i definir les operacions que farem contra la base de dades:
 
 * `DbModels`: Models que utilitza el negoci i que es persistiran a la base de dades (ex: `Alumne`).
-* `Repositori.Abstractions`: Operacions contra el repositori (CRUD, ex: `LlegirAlumnePerId`, `PersisteixAlumne`, `InsertaAlumne`, ...). Aquest projecte depèn de `DbModels`, ha de conèixer els models a persistir. Es tracta d'una capa d'infraestructura.
+* `Repositori.Abstractions`: Contracte d'accés a dades (`ObtenirPerIdAsync`, `LlistaAlumnesAsync`, `AfegirAlumneAsync`, `ActualitzarAlumneAsync`, `EsborrarAlumneAsync`). Aquest projecte depèn de `DbModels`, perquè el repositori treballa amb els models persistents.
 * `Repositori`: Implementa `Repositori.Abstractions`.
 * `Repositori.IntegrationTests`: Comprova que podem persistir.
 
@@ -89,7 +104,10 @@ Funcionalitats principals:
 * Crear alumne des d'un formulari.
 * Llistar alumnes.
 * Veure els detalls d'un alumne.
+* Editar nom i email.
+* Eliminar alumne amb una acció `POST`.
 * Promocionar alumne amb una acció `POST`.
+* Accedir a la gestió d'alumnes des de la pàgina d'inici.
 
 El projecte `Web` és el **composition root**: registra les implementacions concretes al contenidor de dependències:
 
