@@ -2,12 +2,22 @@
 
 ## Objectiu
 
-En aquesta fase creem la capa de presentació amb ASP.NET Core MVC. L'aplicació web consumirà la lògica de negoci de la Fase 2 a través de la seva interfície, sense acoblar-se mai a la implementació concreta. Es demostrarà com la injecció de dependències (DI) uneix totes les capes.
+En aquesta fase creem la capa de presentació amb **ASP.NET Core MVC**. L'aplicació web consumirà la lògica de negoci de la Fase 2 a través de la seva interfície, sense acoblar-se mai a la implementació concreta.
 
-Les funcionalitats a implementar:
-- Crear alumne
-- Veure dades d'un alumne
-- Promocionar alumne
+La idea important és aquesta:
+
+```text
+MVC → LogicaDeNegoci.Abstractions → LogicaDeNegoci → Repositori.Abstractions → Repositori → DbModels
+```
+
+El projecte `Web` és el **composition root**: l'únic punt de l'aplicació on es decideix quines implementacions concretes s'injecten. Els controladors només coneixen contractes de negoci.
+
+Funcionalitats implementades:
+
+- Crear alumne.
+- Llistar alumnes.
+- Veure dades d'un alumne.
+- Promocionar alumne.
 
 ## 1. Crear el projecte MVC i afegir les dependències
 
@@ -25,62 +35,239 @@ dotnet add Web reference Repositori
 dotnet add Web package Microsoft.EntityFrameworkCore.Sqlite
 ```
 
+Afegim el projecte a la solució:
+
 ```bash
 dotnet sln add Web/Web.csproj
 ```
 
-> `Web` depèn de `LogicaDeNegoci.Abstractions` per poder declarar el tipus a injectar.
-> Depèn de `LogicaDeNegoci` i `Repositori` perquè és el punt d'entrada (composition root) que registra les implementacions concretes al contenidor de DI.
+### Per què `Web` depèn de tants projectes?
+
+- Depèn de `LogicaDeNegoci.Abstractions` perquè els controladors injecten `ILogicaNegociAlumne`.
+- Depèn de `LogicaDeNegoci` perquè `Program.cs` registra la implementació `LogicaNegociAlumne`.
+- Depèn de `Repositori.Abstractions` perquè `Program.cs` registra el contracte `IRepositoriAlumne`.
+- Depèn de `Repositori` perquè `Program.cs` registra `RepositoriAlumne` i `AlumnesDbContext`.
+
+Això no trenca l'arquitectura perquè aquestes dependències concretes només apareixen al **composition root**, no als controladors.
 
 ## 2. Configurar la injecció de dependències
 
-El fitxer `Program.cs` és el **composition root**: l'únic lloc de tota l'aplicació on es coneix quines implementacions concretes s'utilitzen.
-
 Fitxer: `Web/Program.cs`
 
-Passos clau:
-- Registrar `AlumnesDbContext` amb SQLite.
-- Registrar `IRepositoriAlumne` → `RepositoriAlumne`.
-- Registrar `ILogicaNegociAlumne` → `LogicaNegociAlumne`.
+```csharp
+using LogicaDeNegoci;
+using LogicaDeNegoci.Abstractions;
+using Microsoft.EntityFrameworkCore;
+using Repositori;
+using Repositori.Abstractions;
 
-> Els controladors només veuran `ILogicaNegociAlumne`. No coneixeran ni el repositori ni EF Core.
+var builder = WebApplication.CreateBuilder(args);
 
-## 3. Crear el controlador `AlumnesController`
+builder.Services.AddControllersWithViews();
+
+builder.Services.AddDbContext<AlumnesDbContext>(options =>
+    options.UseSqlite(builder.Configuration.GetConnectionString("Alumnes")));
+
+builder.Services.AddScoped<IRepositoriAlumne, RepositoriAlumne>();
+builder.Services.AddScoped<ILogicaNegociAlumne, LogicaNegociAlumne>();
+
+var app = builder.Build();
+
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<AlumnesDbContext>();
+    dbContext.Database.EnsureCreated();
+}
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler("/Home/Error");
+    app.UseHsts();
+}
+
+app.UseHttpsRedirection();
+app.UseRouting();
+app.UseAuthorization();
+
+app.MapStaticAssets();
+
+app.MapControllerRoute(
+    name: "default",
+    pattern: "{controller=Home}/{action=Index}/{id?}")
+    .WithStaticAssets();
+
+app.Run();
+```
+
+### 2.1 Cadena de DI
+
+La cadena completa queda així:
+
+```text
+AlumnesController
+└── ILogicaNegociAlumne → LogicaNegociAlumne
+    └── IRepositoriAlumne → RepositoriAlumne
+        └── AlumnesDbContext → SQLite
+```
+
+El controlador **no sap res** de `RepositoriAlumne`, `AlumnesDbContext` ni Entity Framework Core. Aquesta separació és el punt central de la fase.
+
+### 2.2 Cadena de connexió
+
+Fitxer: `Web/appsettings.json`
+
+```json
+{
+  "ConnectionStrings": {
+    "Alumnes": "Data Source=alumnes.db"
+  },
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning"
+    }
+  },
+  "AllowedHosts": "*"
+}
+```
+
+En aquesta fase usem `EnsureCreated()` per crear la base de dades automàticament si no existeix. És correcte per a una pràctica o prototip, però en un projecte real faríem servir migracions d'Entity Framework Core.
+
+## 3. Ampliació necessària de la capa de negoci
+
+Per poder implementar la vista de detalls, MVC necessita demanar un alumne concret per id.
+
+La solució **no** és injectar el repositori al controlador. Això saltaria la capa de negoci i trencaria la separació de responsabilitats.
+
+La solució correcta és afegir un cas d'ús a la capa de negoci:
+
+Fitxer: `LogicaDeNegoci.Abstractions/ILogicaNegociAlumne.cs`
+
+```csharp
+using LogicaDeNegoci.Abstractions.Parametres;
+using LogicaDeNegoci.Abstractions.Projeccions;
+
+namespace LogicaDeNegoci.Abstractions;
+
+public interface ILogicaNegociAlumne
+{
+    Task<ProjeccioAlumne> AfegirAsync(AfegirAlumneParametres parametres);
+    Task<ProjeccioAlumne> CanviarDadesAsync(CanviarDadesAlumneParametres parametres);
+    Task EliminarAsync(EliminarAlumneParametres parametres);
+    Task<ProjeccioAlumne> SeleccionarPerIdAsync(SeleccionarPerIdAlumneParametres parametres);
+    Task<ProjeccioAlumnes> SeleccionarTotsAsync(SeleccionarTotsAlumnesParametres parametres);
+    Task<ProjeccioAlumne> PromocionarAsync(PromocionarAlumneParametres parametres);
+}
+```
+
+Nou paràmetre:
+
+Fitxer: `LogicaDeNegoci.Abstractions/Parametres/SeleccionarPerIdAlumneParametres.cs`
+
+```csharp
+namespace LogicaDeNegoci.Abstractions.Parametres;
+
+public class SeleccionarPerIdAlumneParametres
+{
+    public int Id { get; set; }
+}
+```
+
+Aquest canvi manté la regla arquitectònica:
+
+```text
+Web no consulta el repositori directament.
+Web demana casos d'ús a LogicaDeNegoci.
+```
+
+## 4. Crear el controlador `AlumnesController`
 
 Fitxer: `Web/Controllers/AlumnesController.cs`
 
-El controlador rep `ILogicaNegociAlumne` per constructor (DI). **No** rep el repositori ni el DbContext directament.
+El controlador rep `ILogicaNegociAlumne` per constructor. **No** rep ni el repositori ni el `DbContext`.
 
-Accions a implementar:
+```csharp
+using LogicaDeNegoci.Abstractions;
+using LogicaDeNegoci.Abstractions.Parametres;
+using Microsoft.AspNetCore.Mvc;
 
-| Acció | Mètode HTTP | Ruta | Descripció |
+namespace Web.Controllers;
+
+public class AlumnesController(ILogicaNegociAlumne logicaNegoci) : Controller
+{
+    public async Task<IActionResult> Index()
+    {
+        var alumnes = await logicaNegoci.SeleccionarTotsAsync(new SeleccionarTotsAlumnesParametres());
+        return View(alumnes);
+    }
+
+    public async Task<IActionResult> Detalls(int id)
+    {
+        var alumne = await logicaNegoci.SeleccionarPerIdAsync(new SeleccionarPerIdAlumneParametres { Id = id });
+        return View(alumne);
+    }
+
+    public IActionResult Crear()
+    {
+        return View(new AfegirAlumneParametres());
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Crear(AfegirAlumneParametres parametres)
+    {
+        if (!ModelState.IsValid)
+        {
+            return View(parametres);
+        }
+
+        await logicaNegoci.AfegirAsync(parametres);
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Promocionar(int id)
+    {
+        await logicaNegoci.PromocionarAsync(new PromocionarAlumneParametres { Id = id });
+        return RedirectToAction(nameof(Detalls), new { id });
+    }
+}
+```
+
+### 4.1 Accions del controlador
+
+| Acció | Mètode HTTP | Ruta | Responsabilitat |
 |---|---|---|---|
-| `Index` | GET | `/Alumnes` | Llista tots els alumnes |
-| `Detalls` | GET | `/Alumnes/Detalls/{id}` | Veure dades d'un alumne |
-| `Crear` | GET | `/Alumnes/Crear` | Formulari de creació |
-| `Crear` | POST | `/Alumnes/Crear` | Processa el formulari |
-| `Promocionar` | POST | `/Alumnes/Promocionar/{id}` | Promociona un alumne |
+| `Index` | GET | `/Alumnes` | Demana tots els alumnes a negoci i els mostra. |
+| `Detalls` | GET | `/Alumnes/Detalls/{id}` | Demana un alumne concret a negoci i el mostra. |
+| `Crear` | GET | `/Alumnes/Crear` | Mostra el formulari buit. |
+| `Crear` | POST | `/Alumnes/Crear` | Valida el formulari, crea l'alumne i redirigeix a `Index`. |
+| `Promocionar` | POST | `/Alumnes/Promocionar/{id}` | Demana a negoci que promocioni l'alumne i redirigeix a `Detalls`. |
 
-> L'acció `Crear` GET mostra el formulari buit. L'acció `Crear` POST recull el model, crida `AfegirAsync` i redirigeix.
+### 4.2 Per què `Promocionar` és POST?
 
-### 3.1 Acció `Promocionar`
-
-L'acció és un POST perquè modifica l'estat del servidor. El `id` arriba per ruta. Després de promocionar redirigeix a `Detalls` per mostrar el nou estat de l'alumne.
+Promocionar modifica l'estat del servidor. Per tant, no ha de ser una petició GET.
 
 ```csharp
 [HttpPost]
+[ValidateAntiForgeryToken]
 public async Task<IActionResult> Promocionar(int id)
 {
-    await logica.PromocionarAsync(new PromocionarAlumneParametres { Id = id });
+    await logicaNegoci.PromocionarAsync(new PromocionarAlumneParametres { Id = id });
     return RedirectToAction(nameof(Detalls), new { id });
 }
 ```
 
-> Fixa't que el controlador no sap res de cursos ni de regles de negoci. Delega tot a `ILogicaNegociAlumne`.
+El controlador no sap res de cursos, ni de quan finalitzen els estudis. Això ho decideix `LogicaNegociAlumne`.
 
-## 4. Crear les vistes
+## 5. Crear les vistes
 
-Les vistes s'han de crear **a mà** a la carpeta `Web/Views/Alumnes/`.
+Les vistes es creen a la carpeta:
+
+```text
+Web/Views/Alumnes/
+```
 
 Fitxers necessaris:
 
@@ -91,30 +278,78 @@ Web/Views/Alumnes/
 └── Crear.cshtml       → formulari per donar d'alta un alumne
 ```
 
-### 4.1 Vista `Index.cshtml`
+### 5.1 Vista `Index.cshtml`
 
 Model: `ProjeccioAlumnes`
 
-Mostra una taula amb els alumnes i un enllaç a `Detalls` per cada fila.
+Responsabilitat:
 
-### 4.2 Vista `Detalls.cshtml`
+- Mostrar una taula amb els alumnes.
+- Mostrar un enllaç a `Detalls` per cada alumne.
+- Mostrar un enllaç per crear un alumne nou.
+
+Exemple:
+
+```cshtml
+@model LogicaDeNegoci.Abstractions.Projeccions.ProjeccioAlumnes
+
+<h1>Alumnes</h1>
+
+<p>
+    <a asp-action="Crear">Crear alumne</a>
+</p>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>Nom</th>
+            <th>Email</th>
+            <th>Curs</th>
+            <th>Estudis finalitzats</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var alumne in Model.Alumnes)
+        {
+            <tr>
+                <td>@alumne.Nom</td>
+                <td>@alumne.Email</td>
+                <td>@alumne.Curs</td>
+                <td>@alumne.EstudisFinalitzats</td>
+                <td>
+                    <a asp-action="Detalls" asp-route-id="@alumne.Id">Detalls</a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+```
+
+### 5.2 Vista `Detalls.cshtml`
 
 Model: `ProjeccioAlumne`
 
-Mostra les dades de l'alumne: Nom, Email, Curs i si ha finalitzat els estudis.
+Responsabilitat:
 
-Inclou un formulari `<form method="post">` que apunta a l'acció `Promocionar` per poder promocionar l'alumne amb un botó.
+- Mostrar les dades d'un alumne.
+- Permetre promocionar-lo si encara no ha finalitzat els estudis.
+- Fer la promoció amb un formulari `POST`.
 
 ```cshtml
 @model LogicaDeNegoci.Abstractions.Projeccions.ProjeccioAlumne
+
+<h1>Detalls de l'alumne</h1>
 
 <h2>@Model.Nom</h2>
 
 <dl>
     <dt>Email</dt>
     <dd>@Model.Email</dd>
+
     <dt>Curs</dt>
     <dd>@Model.Curs</dd>
+
     <dt>Estudis finalitzats</dt>
     <dd>@Model.EstudisFinalitzats</dd>
 </dl>
@@ -126,40 +361,135 @@ Inclou un formulari `<form method="post">` que apunta a l'acció `Promocionar` p
     </form>
 }
 
-### 4.3 Vista `Crear.cshtml`
+<p>
+    <a asp-action="Index">Tornar a la llista</a>
+</p>
+```
+
+### 5.3 Vista `Crear.cshtml`
 
 Model: `AfegirAlumneParametres`
 
-Formulari amb camps: Nom i Email (el Curs i l'estat s'inicialitzen a la capa de negoci).
+Responsabilitat:
 
-## 5. Estructura esperada
+- Mostrar un formulari amb els camps `Nom` i `Email`.
+- Enviar el formulari per `POST` a l'acció `Crear`.
+- No demanar `Curs` ni `EstudisFinalitzats`, perquè aquests valors s'inicialitzen a la capa de negoci.
+
+```cshtml
+@model LogicaDeNegoci.Abstractions.Parametres.AfegirAlumneParametres
+
+<h1>Crear alumne</h1>
+
+<form asp-action="Crear" method="post">
+    <div>
+        <label asp-for="Nom"></label>
+        <input asp-for="Nom" />
+        <span asp-validation-for="Nom"></span>
+    </div>
+
+    <div>
+        <label asp-for="Email"></label>
+        <input asp-for="Email" />
+        <span asp-validation-for="Email"></span>
+    </div>
+
+    <button type="submit">Crear</button>
+</form>
+
+<p>
+    <a asp-action="Index">Tornar a la llista</a>
+</p>
+```
+
+## 6. Estructura esperada
 
 ```text
 Alumnes/
-├── Web/
-│   ├── Web.csproj
-│   ├── Program.cs
-│   ├── Controllers/
-│   │   └── AlumnesController.cs
-│   └── Views/
-│       ├── Shared/
-│       │   └── _Layout.cshtml   (generat per la plantilla)
-│       └── Alumnes/
-│           ├── Index.cshtml
-│           ├── Detalls.cshtml
-│           └── Crear.cshtml
+├── Alumnes.slnx
+├── DbModels/
+├── Repositori.Abstractions/
+├── Repositori/
+├── Repositori.IntegrationTests/
+├── LogicaDeNegoci.Abstractions/
+│   ├── ILogicaNegociAlumne.cs
+│   └── Parametres/
+│       └── SeleccionarPerIdAlumneParametres.cs
+├── LogicaDeNegoci/
+├── LogicaDeNegoci.UnitTests/
+└── Web/
+    ├── Web.csproj
+    ├── Program.cs
+    ├── appsettings.json
+    ├── Controllers/
+    │   └── AlumnesController.cs
+    └── Views/
+        ├── Shared/
+        │   └── _Layout.cshtml
+        └── Alumnes/
+            ├── Index.cshtml
+            ├── Detalls.cshtml
+            └── Crear.cshtml
 ```
 
-## 6. Verificar que tot funciona
+## 7. Verificar que tot funciona
+
+Compilar tota la solució:
 
 ```bash
 dotnet build
+```
+
+Executar les proves:
+
+```bash
+dotnet test
+```
+
+Executar l'aplicació web:
+
+```bash
 dotnet run --project Web
 ```
 
-Comprova manualment:
+Comprovacions manuals:
+
 - `/Alumnes/Crear` → pots donar d'alta un alumne.
 - `/Alumnes` → l'alumne creat apareix a la llista.
-- `/Alumnes/Detalls/{id}` → veus les dades i pots promocionar.
-- Promocionar diverses vegades puja el curs fins a 3r i després marca `EstudisFinalitzats = true`.
+- `/Alumnes/Detalls/{id}` → veus les dades de l'alumne.
+- Botó `Promocionar` → puja el curs fins a 3r.
+- Quan l'alumne ja és a 3r, promocionar-lo marca `EstudisFinalitzats = true`.
+- Quan `EstudisFinalitzats = true`, ja no es mostra el botó de promocionar.
 
+## 8. Aclariments importants
+
+- MVC és capa de presentació. No conté regles de negoci.
+- El controlador no calcula el curs següent ni decideix si un alumne ha finalitzat els estudis.
+- El controlador no utilitza `AlumnesDbContext` directament.
+- El controlador no utilitza `IRepositoriAlumne` directament.
+- La promoció és un `POST` perquè modifica dades.
+- `EnsureCreated()` és acceptable per aquesta fase didàctica; en una aplicació real caldria usar migracions.
+
+## 9. Resultat final de la Fase 3
+
+En acabar aquesta fase tenim una aplicació MVC funcional que respecta la separació de capes:
+
+```text
+Usuari
+↓
+Vista Razor
+↓
+AlumnesController
+↓
+ILogicaNegociAlumne
+↓
+LogicaNegociAlumne
+↓
+IRepositoriAlumne
+↓
+RepositoriAlumne
+↓
+SQLite
+```
+
+La capa web només orquestra peticions HTTP i respostes HTML. La lògica de negoci continua centralitzada a `LogicaDeNegoci`, que és exactament el que buscàvem amb aquesta arquitectura.
