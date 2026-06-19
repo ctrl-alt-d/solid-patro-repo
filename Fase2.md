@@ -1,8 +1,11 @@
 # Documentació Fase 2
 
+> Resolució a la branca:
+> [github.com/ctrl-alt-d/solid-patro-repo/tree/Fase2](https://github.com/ctrl-alt-d/solid-patro-repo/tree/Fase2)
+
 ## Objectiu
 
-En aquesta fase farem la capa de negoci. La capa de negoci és la que té UoW (Unitats de treball). Les unitats de treball utilitzen el repositori. Fixa't que les operacions de negoci no es corresponen un a un amb les operacions del repositori; per exemple, tenim una operació de negoci "Promocionar alumne" que sumarà un curs al curs actual fins a arribar a 3r i marcarà com a finalitzat quan ja estigui al darrer curs.
+En aquesta fase farem la capa de negoci. Aquesta capa concentra els casos d'ús de l'aplicació i utilitza el repositori a través de `IRepositoriAlumne`. Fixa't que les operacions de negoci no es corresponen un a un amb les operacions del repositori; per exemple, tenim una operació de negoci "Promocionar alumne" que sumarà un curs al curs actual fins a arribar a 3r i marcarà com a finalitzat quan ja estigui al darrer curs.
 
 ## 1. Crear els projectes i afegir les dependències
 
@@ -112,6 +115,8 @@ public class ProjeccioAlumne
 ## 3. Implementar la lògica de negoci
 
 **Responsabilitat**: aplicar regles de negoci i delegar persistència al repositori.
+
+En el codi actual, `LogicaNegociAlumne` depèn de `IRepositoriAlumne`. Això permet testejar la regla de negoci amb un mock i evita que la capa de negoci quedi acoblada a Entity Framework Core.
 
 Fitxer: `LogicaDeNegoci/LogicaNegociAlumne.cs`
 
