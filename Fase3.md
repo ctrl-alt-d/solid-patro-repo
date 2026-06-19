@@ -17,6 +17,8 @@ Funcionalitats implementades:
 - Crear alumne.
 - Llistar alumnes.
 - Veure dades d'un alumne.
+- Editar les dades d'un alumne.
+- Eliminar alumne.
 - Promocionar alumne.
 
 ## 1. Crear el projecte MVC i afegir les dependències
@@ -225,12 +227,45 @@ public class AlumnesController(ILogicaNegociAlumne logicaNegoci) : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    public async Task<IActionResult> Editar(int id)
+    {
+        var alumne = await logicaNegoci.SeleccionarPerIdAsync(new SeleccionarPerIdAlumneParametres { Id = id });
+
+        return View(new CanviarDadesAlumneParametres
+        {
+            Id = alumne.Id,
+            Nom = alumne.Nom,
+            Email = alumne.Email,
+        });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Editar(CanviarDadesAlumneParametres parametres)
+    {
+        if (!ModelState.IsValid)
+        {
+            return View(parametres);
+        }
+
+        await logicaNegoci.CanviarDadesAsync(parametres);
+        return RedirectToAction(nameof(Detalls), new { id = parametres.Id });
+    }
+
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Promocionar(int id)
     {
         await logicaNegoci.PromocionarAsync(new PromocionarAlumneParametres { Id = id });
         return RedirectToAction(nameof(Detalls), new { id });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Eliminar(int id)
+    {
+        await logicaNegoci.EliminarAsync(new EliminarAlumneParametres { Id = id });
+        return RedirectToAction(nameof(Index));
     }
 }
 ```
@@ -243,7 +278,10 @@ public class AlumnesController(ILogicaNegociAlumne logicaNegoci) : Controller
 | `Detalls` | GET | `/Alumnes/Detalls/{id}` | Demana un alumne concret a negoci i el mostra. |
 | `Crear` | GET | `/Alumnes/Crear` | Mostra el formulari buit. |
 | `Crear` | POST | `/Alumnes/Crear` | Valida el formulari, crea l'alumne i redirigeix a `Index`. |
+| `Editar` | GET | `/Alumnes/Editar/{id}` | Carrega l'alumne i mostra el formulari d'edició. |
+| `Editar` | POST | `/Alumnes/Editar` | Valida el formulari, canvia nom/email i redirigeix a `Detalls`. |
 | `Promocionar` | POST | `/Alumnes/Promocionar/{id}` | Demana a negoci que promocioni l'alumne i redirigeix a `Detalls`. |
+| `Eliminar` | POST | `/Alumnes/Eliminar/{id}` | Demana a negoci que elimini l'alumne i redirigeix a `Index`. |
 
 ### 4.2 Per què `Promocionar` és POST?
 
@@ -275,7 +313,8 @@ Fitxers necessaris:
 Web/Views/Alumnes/
 ├── Index.cshtml       → llista d'alumnes amb enllaç a Detalls
 ├── Detalls.cshtml     → fitxa d'un alumne amb botó Promocionar
-└── Crear.cshtml       → formulari per donar d'alta un alumne
+├── Crear.cshtml       → formulari per donar d'alta un alumne
+└── Editar.cshtml      → formulari per canviar nom i email
 ```
 
 ### 5.1 Vista `Index.cshtml`
@@ -286,6 +325,8 @@ Responsabilitat:
 
 - Mostrar una taula amb els alumnes.
 - Mostrar un enllaç a `Detalls` per cada alumne.
+- Mostrar un enllaç a `Editar` per cada alumne.
+- Permetre eliminar un alumne amb un formulari `POST`.
 - Mostrar un enllaç per crear un alumne nou.
 
 Exemple:
@@ -402,6 +443,49 @@ Responsabilitat:
 </p>
 ```
 
+### 5.4 Vista `Editar.cshtml`
+
+Model: `CanviarDadesAlumneParametres`
+
+Responsabilitat:
+
+- Mostrar un formulari amb les dades actuals de l'alumne.
+- Permetre canviar `Nom` i `Email`.
+- Mantenir l'`Id` en un camp ocult.
+- Enviar el formulari per `POST` a l'acció `Editar`.
+
+```cshtml
+@model LogicaDeNegoci.Abstractions.Parametres.CanviarDadesAlumneParametres
+
+<h1>Editar alumne</h1>
+
+<form asp-action="Editar" method="post">
+    <input asp-for="Id" type="hidden" />
+
+    <div>
+        <label asp-for="Nom"></label>
+        <input asp-for="Nom" />
+        <span asp-validation-for="Nom"></span>
+    </div>
+
+    <div>
+        <label asp-for="Email"></label>
+        <input asp-for="Email" />
+        <span asp-validation-for="Email"></span>
+    </div>
+
+    <button type="submit">Desar</button>
+</form>
+```
+
+### 5.5 Enllaç des de la pàgina d'inici
+
+La pàgina `Web/Views/Home/Index.cshtml` inclou un enllaç cap a la gestió d'estudiants:
+
+```cshtml
+<a asp-controller="Alumnes" asp-action="Index">Anar a la gestió d'estudiants</a>
+```
+
 ## 6. Estructura esperada
 
 ```text
@@ -429,7 +513,8 @@ Alumnes/
         └── Alumnes/
             ├── Index.cshtml
             ├── Detalls.cshtml
-            └── Crear.cshtml
+            ├── Crear.cshtml
+            └── Editar.cshtml
 ```
 
 ## 7. Verificar que tot funciona
@@ -457,6 +542,8 @@ Comprovacions manuals:
 - `/Alumnes/Crear` → pots donar d'alta un alumne.
 - `/Alumnes` → l'alumne creat apareix a la llista.
 - `/Alumnes/Detalls/{id}` → veus les dades de l'alumne.
+- `/Alumnes/Editar/{id}` → pots canviar nom i email.
+- `Eliminar` → elimina l'alumne i torna a la llista.
 - Botó `Promocionar` → puja el curs fins a 3r.
 - Quan l'alumne ja és a 3r, promocionar-lo marca `EstudisFinalitzats = true`.
 - Quan `EstudisFinalitzats = true`, ja no es mostra el botó de promocionar.

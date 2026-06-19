@@ -19,10 +19,16 @@
 
 @if (!Model.EstudisFinalitzats)
 {
-    <form asp-action="Promocionar" asp-route-id="@Model.Id" method="post">
+    <form asp-action="Promocionar" asp-route-id="@Model.Id" method="post" class="d-inline">
         <button type="submit" class="btn btn-primary">Promocionar</button>
     </form>
 }
+
+<a asp-action="Editar" asp-route-id="@Model.Id" class="btn btn-secondary">Editar</a>
+
+<form asp-action="Eliminar" asp-route-id="@Model.Id" method="post" class="d-inline">
+    <button type="submit" class="btn btn-danger">Eliminar</button>
+</form>
 
 <p class="mt-3">
     <a asp-action="Index">Tornar a la llista</a>

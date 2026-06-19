@@ -30,6 +30,12 @@
             <td>@(alumne.EstudisFinalitzats ? "Sí" : "No")</td>
             <td>
                 <a asp-action="Detalls" asp-route-id="@alumne.Id">Detalls</a>
+                |
+                <a asp-action="Editar" asp-route-id="@alumne.Id">Editar</a>
+                |
+                <form asp-action="Eliminar" asp-route-id="@alumne.Id" method="post" class="d-inline">
+                    <button type="submit" class="btn btn-link p-0 align-baseline">Eliminar</button>
+                </form>
             </td>
         </tr>
     }
