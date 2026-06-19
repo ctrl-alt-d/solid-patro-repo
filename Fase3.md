@@ -133,13 +133,13 @@ Fitxer: `Web/appsettings.json`
 
 En aquesta fase usem `EnsureCreated()` per crear la base de dades automàticament si no existeix. És correcte per a una pràctica o prototip, però en un projecte real faríem servir migracions d'Entity Framework Core.
 
-## 3. Ampliació necessària de la capa de negoci
+## 3. Cas d'ús de negoci necessari per a detalls
 
 Per poder implementar la vista de detalls, MVC necessita demanar un alumne concret per id.
 
 La solució **no** és injectar el repositori al controlador. Això saltaria la capa de negoci i trencaria la separació de responsabilitats.
 
-La solució correcta és afegir un cas d'ús a la capa de negoci:
+Per això, aquest cas d'ús ja ha d'estar definit a la Fase 2 dins la capa de negoci:
 
 Fitxer: `LogicaDeNegoci.Abstractions/ILogicaNegociAlumne.cs`
 
@@ -173,7 +173,7 @@ public class SeleccionarPerIdAlumneParametres
 }
 ```
 
-Aquest canvi manté la regla arquitectònica:
+Això manté la regla arquitectònica:
 
 ```text
 Web no consulta el repositori directament.

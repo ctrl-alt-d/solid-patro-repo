@@ -97,20 +97,20 @@ public class LogicaNegociAlumneTests
 	[Fact]
 	public async Task SeleccionarPerIdAsync_Retorna_La_Projeccio()
 	{
-		repositori.ObtenirPerIdAsync(5).Returns(new Alumne
+		repositori.ObtenirPerIdAsync(7).Returns(new Alumne
 		{
-			Id = 5,
+			Id = 7,
 			Nom = "Ada",
 			Email = "ada@demo.cat",
 			Curs = 2,
 			EstudisFinalitzats = false,
 		});
 
-		var resultat = await sut.SeleccionarPerIdAsync(new SeleccionarPerIdAlumneParametres { Id = 5 });
+		var resultat = await sut.SeleccionarPerIdAsync(new SeleccionarPerIdAlumneParametres { Id = 7 });
 
 		resultat.Should().BeEquivalentTo(new ProjeccioAlumne
 		{
-			Id = 5,
+			Id = 7,
 			Nom = "Ada",
 			Email = "ada@demo.cat",
 			Curs = 2,
