@@ -1,6 +1,4 @@
-# solid-patro-repo
-
-## Pràctica patró repositori
+# Pràctica: Repository, lògica de negoci i MVC
 
 Basat en el document [Implementing the Repository and Unit of Work Patterns in an ASP.NET MVC Application](https://learn.microsoft.com/en-us/aspnet/mvc/overview/older-versions/getting-started-with-ef-5-using-mvc-4/implementing-the-repository-and-unit-of-work-patterns-in-an-asp-net-mvc-application)
 
@@ -8,31 +6,107 @@ Basat en el document [Implementing the Repository and Unit of Work Patterns in a
 
 ## Objectiu
 
-Crear una aplicació MVC on les operacions de negoci estiguin encapsulades en IoW (Unitats de Treball) i que no depenguin d'una infraestructura concreta per persistir i recuperar les dades de la base de dades.
+Crear una aplicació MVC on les operacions de negoci estiguin encapsulades en una capa pròpia i no depenguin d'una infraestructura concreta per persistir i recuperar les dades de la base de dades.
+
+El que busquem és separar responsabilitats:
+
+```text
+MVC → Lògica de negoci → Repositori → Base de dades
+```
+
+La capa MVC només ha d'orquestrar peticions HTTP i respostes HTML. Les regles de negoci han de viure a la capa de negoci. El repositori només s'ha d'encarregar de persistir i recuperar dades.
 
 ## Aplicació
 
 Farem una aplicació [CRUD](https://ca.wikipedia.org/wiki/Crear,_llegir,_actualitzar_i_esborrar) i a més tindrà una operació de negoci:
 
-* Crear alumne
-* Esborrar alumne
-* Actualitzar alumne
-* Llegit un alumne
-* Llegir tots els alumnes
-* Promocionar alumne (operació de negoci)
+* Crear alumne.
+* Esborrar alumne.
+* Actualitzar alumne.
+* Llegir un alumne.
+* Llegir tots els alumnes.
+* Promocionar alumne — operació de negoci.
 
-## Per on comencem?
+## Fase 1: repositori i persistència
 
-Crearem dos projectes on posar estructures de dades i definir les operacions que farem contra la base de dades:
+Crearem els projectes on posar estructures de dades i definir les operacions que farem contra la base de dades:
+
 * `DbModels`: Models que utilitza el negoci i que es persistiran a la base de dades (ex: `Alumne`).
 * `Repositori.Abstractions`: Operacions contra el repositori (CRUD, ex: `LlegirAlumnePerId`, `PersisteixAlumne`, `InsertaAlumne`, ...). Aquest projecte depèn de `DbModels`, ha de conèixer els models a persistir. Es tracta d'una capa d'infraestructura.
-* `Repositori`: Implementa `Repositori.Abstractions`
+* `Repositori`: Implementa `Repositori.Abstractions`.
 * `Repositori.IntegrationTests`: Comprova que podem persistir.
+
+Consulta els detalls a [`Fase1.md`](./Fase1.md).
 
 ## TDD
 
-Podem fer TDD, podriem fer que VS Code generi la implementació de `Repositori` a partir de `Repositori.Abstractions`, llavors, escrivim els testos que fallaran i anem implementant.
+Podem fer TDD: fem que VS Code generi la implementació de `Repositori` a partir de `Repositori.Abstractions`, escrivim els tests que fallaran i anem implementant fins que passin.
 
 ## Fase 2
 
-En aquesta fase farem la capa de negoci. La capa de negoci és la que té UoW (Unitats de treball). Les unitats de treball utilitzen el repositori; fixa't que les operacions de negoci no es corresponen un a un amb les operacions del repositori. Per exemple, tenim una operació de negoci "Promocionar alumne" que sumarà un curs al curs actual fins arribar a 3r i marcarà com a finalitzat quan ja estigui al darrer curs.
+En aquesta fase farem la capa de negoci. La capa de negoci és la que concentra els casos d'ús. Aquests casos d'ús utilitzen el repositori, però no es corresponen un a un amb les operacions del repositori. Per exemple, tenim una operació de negoci "Promocionar alumne" que sumarà un curs al curs actual fins a arribar a 3r i marcarà com a finalitzat quan ja estigui al darrer curs.
+
+La idea important és que el controlador MVC no hauria de saber aquesta regla. El repositori tampoc. Aquesta regla pertany a la lògica de negoci:
+
+```csharp
+public async Task<ProjeccioAlumne> PromocionarAsync(PromocionarAlumneParametres parametres)
+{
+	var alumne = await repositori.ObtenirPerIdAsync(parametres.Id)
+		?? throw new InvalidOperationException($"No s'ha trobat l'alumne amb id {parametres.Id}.");
+
+	if (alumne.Curs < 3)
+	{
+		alumne.Curs++;
+	}
+	else
+	{
+		alumne.EstudisFinalitzats = true;
+	}
+
+	await repositori.ActualitzarAlumneAsync(alumne);
+
+	return new ProjeccioAlumne
+	{
+		Id = alumne.Id,
+		Nom = alumne.Nom,
+		Email = alumne.Email,
+		Curs = alumne.Curs,
+		EstudisFinalitzats = alumne.EstudisFinalitzats,
+	};
+}
+```
+
+Aquest tall de codi és el cor de l'arquitectura: la regla de promoció està encapsulada en un cas d'ús de negoci, el repositori només persisteix el resultat i MVC només demana que l'acció es faci.
+
+Consulta els detalls a [`Fase2.md`](./Fase2.md).
+
+## Fase 3: ASP.NET Core MVC
+
+En aquesta fase afegim la capa de presentació amb un projecte `Web` basat en ASP.NET Core MVC.
+
+Funcionalitats principals:
+
+* Crear alumne des d'un formulari.
+* Llistar alumnes.
+* Veure els detalls d'un alumne.
+* Promocionar alumne amb una acció `POST`.
+
+El projecte `Web` és el **composition root**: registra les implementacions concretes al contenidor de dependències:
+
+```text
+ILogicaNegociAlumne → LogicaNegociAlumne
+IRepositoriAlumne   → RepositoriAlumne
+AlumnesDbContext    → SQLite
+```
+
+Però els controladors només depenen de `ILogicaNegociAlumne`. Això és clau: MVC no coneix ni Entity Framework Core ni el repositori.
+
+Consulta els detalls a [`Fase3.md`](./Fase3.md).
+
+## Verificació
+
+```bash
+dotnet build
+dotnet test
+dotnet run --project Web
+```
