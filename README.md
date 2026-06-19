@@ -32,3 +32,7 @@ Crearem dos projectes on posar estructures de dades i definir les operacions que
 ## TDD
 
 Podem fer TDD, podriem fer que VS Code generi la implementació de `Repositori` a partir de `Repositori.Abstractions`, llavors, escrivim els testos que fallaran i anem implementant.
+
+## Fase 2
+
+En aquesta fase farem la capa de negoci. La capa de negoci és la que té UoW (Unitats de treball). Les unitats de treball utilitzen el repositori, fixa't que les operacions de negoci no es corresponen un a un amb les operacions del repositori, per exempl, tenim una operació de negoci "Promocionar alumne" que sumarà un curs al curs actual fins arribar a 2n i marcarà com a finalitzat si ha completat 2n curs.
