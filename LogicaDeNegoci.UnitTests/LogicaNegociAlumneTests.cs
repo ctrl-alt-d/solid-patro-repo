@@ -95,6 +95,30 @@ public class LogicaNegociAlumneTests
 	}
 
 	[Fact]
+	public async Task SeleccionarPerIdAsync_Retorna_La_Projeccio()
+	{
+		repositori.ObtenirPerIdAsync(7).Returns(new Alumne
+		{
+			Id = 7,
+			Nom = "Ada",
+			Email = "ada@demo.cat",
+			Curs = 2,
+			EstudisFinalitzats = false,
+		});
+
+		var resultat = await sut.SeleccionarPerIdAsync(new SeleccionarPerIdAlumneParametres { Id = 7 });
+
+		resultat.Should().BeEquivalentTo(new ProjeccioAlumne
+		{
+			Id = 7,
+			Nom = "Ada",
+			Email = "ada@demo.cat",
+			Curs = 2,
+			EstudisFinalitzats = false,
+		});
+	}
+
+	[Fact]
 	public async Task PromocionarAsync_Delega_I_Retorna_Projeccio_Actualitzada()
 	{
 		repositori.ObtenirPerIdAsync(5).Returns(new Alumne

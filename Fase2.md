@@ -42,6 +42,7 @@ dotnet sln add LogicaDeNegoci.UnitTests/LogicaDeNegoci.UnitTests.csproj
 Exemple:
 - `AfegirAsync`: alta d'alumne amb valors inicials de negoci.
 - `PromocionarAsync`: regla de promoció/fi d'estudis.
+- `SeleccionarPerIdAsync`: retorn d'una projecció d'un alumne concret.
 - `SeleccionarTotsAsync`: retorn de projeccions per consum de capa superior.
 
 Fitxer: `LogicaDeNegoci.Abstractions/ILogicaNegociAlumne.cs`
@@ -57,6 +58,7 @@ public interface ILogicaNegociAlumne
 	Task<ProjeccioAlumne> AfegirAsync(AfegirAlumneParametres parametres);
 	Task<ProjeccioAlumne> CanviarDadesAsync(CanviarDadesAlumneParametres parametres);
 	Task EliminarAsync(EliminarAlumneParametres parametres);
+	Task<ProjeccioAlumne> SeleccionarPerIdAsync(SeleccionarPerIdAlumneParametres parametres);
 	Task<ProjeccioAlumnes> SeleccionarTotsAsync(SeleccionarTotsAlumnesParametres parametres);
 	Task<ProjeccioAlumne> PromocionarAsync(PromocionarAlumneParametres parametres);
 }
@@ -76,6 +78,17 @@ Exemple rellevant de paràmetres:
 namespace LogicaDeNegoci.Abstractions.Parametres;
 
 public class PromocionarAlumneParametres
+{
+	public int Id { get; set; }
+}
+```
+
+També necessitem un paràmetre per seleccionar un alumne concret per `Id`. Aquest cas d'ús serà necessari més endavant des de MVC per mostrar la pantalla de detalls sense saltar-se la capa de negoci.
+
+```csharp
+namespace LogicaDeNegoci.Abstractions.Parametres;
+
+public class SeleccionarPerIdAlumneParametres
 {
 	public int Id { get; set; }
 }
@@ -104,9 +117,29 @@ Fitxer: `LogicaDeNegoci/LogicaNegociAlumne.cs`
 
 Punts clau de la implementació:
 - Recuperar l'alumne amb `ObtenirPerIdAsync` i llançar excepció si no existeix.
+- Implementar `SeleccionarPerIdAsync` com a cas d'ús de consulta de negoci, retornant una projecció.
 - Aplicar la regla de promoció a la capa de negoci.
 - Persistir amb `ActualitzarAlumneAsync`.
 - Retornar projeccions (no entitats de base de dades).
+
+Snippet rellevant de selecció per id:
+
+```csharp
+public async Task<ProjeccioAlumne> SeleccionarPerIdAsync(SeleccionarPerIdAlumneParametres parametres)
+{
+	var alumne = await repositori.ObtenirPerIdAsync(parametres.Id)
+		?? throw new InvalidOperationException($"No s'ha trobat l'alumne amb id {parametres.Id}.");
+
+	return new ProjeccioAlumne
+	{
+		Id = alumne.Id,
+		Nom = alumne.Nom,
+		Email = alumne.Email,
+		Curs = alumne.Curs,
+		EstudisFinalitzats = alumne.EstudisFinalitzats,
+	};
+}
+```
 
 Snippet rellevant de la regla de promoció:
 
@@ -149,6 +182,7 @@ Casos mínims recomanats:
 - `CanviarDadesAsync`: actualitza nom i email.
 - `EliminarAsync`: delega l'eliminació.
 - `PromocionarAsync`: aplica regla de promoció/finalització.
+- `SeleccionarPerIdAsync`: obté un alumne per id i el transforma a projecció.
 - `SeleccionarTotsAsync`: mapa d'entitats a projeccions.
 
 Snippet rellevant de test de promoció:
@@ -188,6 +222,7 @@ Alumnes/
 │   │   ├── CanviarDadesAlumneParametres.cs
 │   │   ├── EliminarAlumneParametres.cs
 │   │   ├── PromocionarAlumneParametres.cs
+│   │   ├── SeleccionarPerIdAlumneParametres.cs
 │   │   └── SeleccionarTotsAlumnesParametres.cs
 │   └── Projeccions/
 │       ├── ProjeccioAlumne.cs

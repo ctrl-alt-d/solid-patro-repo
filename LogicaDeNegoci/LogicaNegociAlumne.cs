@@ -55,6 +55,21 @@ public class LogicaNegociAlumne(IRepositoriAlumne repositori) : ILogicaNegociAlu
         return repositori.EsborrarAlumneAsync(parametres.Id);
     }
 
+    public async Task<ProjeccioAlumne> SeleccionarPerIdAsync(SeleccionarPerIdAlumneParametres parametres)
+    {
+        var alumne = await repositori.ObtenirPerIdAsync(parametres.Id)
+            ?? throw new InvalidOperationException($"No s'ha trobat l'alumne amb id {parametres.Id}.");
+
+        return new ProjeccioAlumne
+        {
+            Id = alumne.Id,
+            Nom = alumne.Nom,
+            Email = alumne.Email,
+            Curs = alumne.Curs,
+            EstudisFinalitzats = alumne.EstudisFinalitzats,
+        };
+    }
+
     public async Task<ProjeccioAlumne> PromocionarAsync(PromocionarAlumneParametres parametres)
     {
         var alumne = await repositori.ObtenirPerIdAsync(parametres.Id)
