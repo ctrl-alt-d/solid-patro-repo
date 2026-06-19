@@ -1,5 +1,8 @@
 # Documentació Fase 3
 
+> Resolució a la branca:
+> [github.com/ctrl-alt-d/solid-patro-repo/tree/Fase3](https://github.com/ctrl-alt-d/solid-patro-repo/tree/Fase3)
+
 ## Objectiu
 
 En aquesta fase creem la capa de presentació amb **ASP.NET Core MVC**. L'aplicació web consumirà la lògica de negoci de la Fase 2 a través de la seva interfície, sense acoblar-se mai a la implementació concreta.
@@ -20,6 +23,7 @@ Funcionalitats implementades:
 - Editar les dades d'un alumne.
 - Eliminar alumne.
 - Promocionar alumne.
+- Accedir a la gestió d'alumnes des de la pàgina d'inici.
 
 ## 1. Crear el projecte MVC i afegir les dependències
 
@@ -311,8 +315,8 @@ Fitxers necessaris:
 
 ```text
 Web/Views/Alumnes/
-├── Index.cshtml       → llista d'alumnes amb enllaç a Detalls
-├── Detalls.cshtml     → fitxa d'un alumne amb botó Promocionar
+├── Index.cshtml       → llista d'alumnes amb enllaços a Detalls/Editar i formulari d'eliminació
+├── Detalls.cshtml     → fitxa d'un alumne amb botons Promocionar, Editar i Eliminar
 ├── Crear.cshtml       → formulari per donar d'alta un alumne
 └── Editar.cshtml      → formulari per canviar nom i email
 ```
@@ -351,18 +355,24 @@ Exemple:
         </tr>
     </thead>
     <tbody>
-        @foreach (var alumne in Model.Alumnes)
-        {
-            <tr>
-                <td>@alumne.Nom</td>
-                <td>@alumne.Email</td>
-                <td>@alumne.Curs</td>
-                <td>@alumne.EstudisFinalitzats</td>
-                <td>
-                    <a asp-action="Detalls" asp-route-id="@alumne.Id">Detalls</a>
-                </td>
-            </tr>
-        }
+    @foreach (var alumne in Model.Alumnes)
+    {
+        <tr>
+            <td>@alumne.Nom</td>
+            <td>@alumne.Email</td>
+            <td>@alumne.Curs</td>
+            <td>@(alumne.EstudisFinalitzats ? "Sí" : "No")</td>
+            <td>
+                <a asp-action="Detalls" asp-route-id="@alumne.Id">Detalls</a>
+                |
+                <a asp-action="Editar" asp-route-id="@alumne.Id">Editar</a>
+                |
+                <form asp-action="Eliminar" asp-route-id="@alumne.Id" method="post" class="d-inline">
+                    <button type="submit" class="btn btn-link p-0 align-baseline">Eliminar</button>
+                </form>
+            </td>
+        </tr>
+    }
     </tbody>
 </table>
 ```
@@ -376,13 +386,12 @@ Responsabilitat:
 - Mostrar les dades d'un alumne.
 - Permetre promocionar-lo si encara no ha finalitzat els estudis.
 - Fer la promoció amb un formulari `POST`.
+- Permetre anar a editar-lo o eliminar-lo.
 
 ```cshtml
 @model LogicaDeNegoci.Abstractions.Projeccions.ProjeccioAlumne
 
-<h1>Detalls de l'alumne</h1>
-
-<h2>@Model.Nom</h2>
+<h1>@Model.Nom</h1>
 
 <dl>
     <dt>Email</dt>
@@ -392,7 +401,7 @@ Responsabilitat:
     <dd>@Model.Curs</dd>
 
     <dt>Estudis finalitzats</dt>
-    <dd>@Model.EstudisFinalitzats</dd>
+    <dd>@(Model.EstudisFinalitzats ? "Sí" : "No")</dd>
 </dl>
 
 @if (!Model.EstudisFinalitzats)
@@ -401,6 +410,12 @@ Responsabilitat:
         <button type="submit">Promocionar</button>
     </form>
 }
+
+<a asp-action="Editar" asp-route-id="@Model.Id">Editar</a>
+
+<form asp-action="Eliminar" asp-route-id="@Model.Id" method="post">
+    <button type="submit">Eliminar</button>
+</form>
 
 <p>
     <a asp-action="Index">Tornar a la llista</a>
@@ -483,7 +498,7 @@ Responsabilitat:
 La pàgina `Web/Views/Home/Index.cshtml` inclou un enllaç cap a la gestió d'estudiants:
 
 ```cshtml
-<a asp-controller="Alumnes" asp-action="Index">Anar a la gestió d'estudiants</a>
+<a asp-controller="Alumnes" asp-action="Index" class="btn btn-primary btn-lg">Anar a la gestió d'estudiants</a>
 ```
 
 ## 6. Estructura esperada

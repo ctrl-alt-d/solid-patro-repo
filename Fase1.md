@@ -1,8 +1,11 @@
 # Documentació Fase 1
 
+> Resolució a la branca:
+> [github.com/ctrl-alt-d/solid-patro-repo/tree/Fase1](https://github.com/ctrl-alt-d/solid-patro-repo/tree/Fase1)
+
 ## Objectiu
 
-En aquesta fase es crea l'estructura base del projecte per implementar el patró Repository (i, opcionalment, Unit of Work), separant models, contractes, implementació i proves d'integració.
+En aquesta fase es crea l'estructura base del projecte per implementar el patró Repository, separant models, contractes, implementació i proves d'integració.
 
 ## 1. Crear la solució
 
@@ -35,7 +38,6 @@ dotnet new classlib -n Repositori.Abstractions
 
 Exemple:
 - `IRepositoriAlumne`: contracte per obtenir, llistar, afegir, actualitzar i esborrar alumnes.
-- `IUnitOfWork` (opcional en aquesta fase): contracte per agrupar repositoris i gestionar persistència transaccional.
 
 **Dependència**:
 
@@ -160,9 +162,10 @@ public interface IRepositoriAlumne
     Task AfegirAlumneAsync(Alumne alumne);
     Task ActualitzarAlumneAsync(Alumne alumne);
     Task EsborrarAlumneAsync(int id);
-    Task PromocionarAlumneAsync(int id);
 }
 ```
+
+Fixa't que el repositori **no** té cap mètode `PromocionarAlumneAsync`: promocionar és una regla de negoci i s'implementarà a la capa `LogicaDeNegoci`.
 
 ### 6.3 Esquelet de la implementació del repositori
 
@@ -279,6 +282,4 @@ public class RespositoriAlumneTests
 - `IntegrationTests` valida la integració completa (repositori + EF Core + SQLite), no només mètodes aïllats.
 - Fer servir SQLite en memòria (`DataSource=:memory:`) fa que les proves siguin ràpides i repetibles.
 - `EnsureCreated()` prepara l'esquema de BD només per a proves; en entorns reals es recomanen migracions (`dotnet ef migrations`).
-- A la propera fase implementarem `Unit of Work`.
-
-
+- A la propera fase afegirem la capa de negoci, que consumirà aquest repositori mitjançant la interfície `IRepositoriAlumne`.
