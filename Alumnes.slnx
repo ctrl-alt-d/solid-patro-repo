@@ -6,4 +6,5 @@
   <Project Path="Repositori.Abstractions/Repositori.Abstractions.csproj" />
   <Project Path="Repositori.IntegrationTests/Repositori.IntegrationTests.csproj" />
   <Project Path="Repositori/Repositori.csproj" />
+  <Project Path="Web/Web.csproj" />
 </Solution>

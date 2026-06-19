@@ -6,4 +6,15 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\LogicaDeNegoci.Abstractions\LogicaDeNegoci.Abstractions.csproj" />
+    <ProjectReference Include="..\LogicaDeNegoci\LogicaDeNegoci.csproj" />
+    <ProjectReference Include="..\Repositori.Abstractions\Repositori.Abstractions.csproj" />
+    <ProjectReference Include="..\Repositori\Repositori.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.9" />
+  </ItemGroup>
+
 </Project>
