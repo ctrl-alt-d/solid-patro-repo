@@ -9,6 +9,5 @@ public interface IRepositoriAlumne
     Task AfegirAlumneAsync(Alumne alumne);
     Task ActualitzarAlumneAsync(Alumne alumne);
     Task EsborrarAlumneAsync(int id);
-    Task PromocionarAlumneAsync(int id);
 
 }

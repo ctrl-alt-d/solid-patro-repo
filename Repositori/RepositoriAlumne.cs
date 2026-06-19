@@ -40,21 +40,5 @@ public class RepositoriAlumne(AlumnesDbContext dbContext) : IRepositoriAlumne
         return await dbContext.Alumnes.FirstOrDefaultAsync(a => a.Id == id);
     }
 
-    public async Task PromocionarAlumneAsync(int id)
-    {
-        var alumne = await dbContext.Alumnes.FirstOrDefaultAsync(a => a.Id == id);
-        if (alumne is null)
-        {
-            return;
-        }
 
-        alumne.Curs++;
-        if (alumne.Curs > 4)
-        {
-            alumne.EstudisFinalitzats = true;
-        }
-
-        dbContext.Alumnes.Update(alumne);
-        await dbContext.SaveChangesAsync();
-    }
 }
