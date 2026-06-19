@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="DbModels/DbModels.csproj" />
+  <Project Path="Repositori.Abstractions/Repositori.Abstractions.csproj" />
+  <Project Path="Repositori.IntegrationTests/Repositori.IntegrationTests.csproj" />
+  <Project Path="Repositori/Repositori.csproj" />
+</Solution>
