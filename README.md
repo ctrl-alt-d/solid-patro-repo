@@ -32,4 +32,3 @@ Crearem dos projectes on posar estructures de dades i definir les operacions que
 ## TDD
 
 Podem fer TDD, podriem fer que VS Code generi la implementació de `Repositori` a partir de `Repositori.Abstractions`, llavors, escrivim els testos que fallaran i anem implementant.
-  
