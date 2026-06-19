@@ -1,5 +1,8 @@
 # Documentació Fase 3
 
+> Resolució a la branca:
+> [github.com/ctrl-alt-d/solid-patro-repo/tree/Fase3](https://github.com/ctrl-alt-d/solid-patro-repo/tree/Fase3)
+
 ## Objectiu
 
 En aquesta fase creem la capa de presentació amb **ASP.NET Core MVC**. L'aplicació web consumirà la lògica de negoci de la Fase 2 a través de la seva interfície, sense acoblar-se mai a la implementació concreta.

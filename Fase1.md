@@ -1,5 +1,8 @@
 # Documentació Fase 1
 
+> Resolució a la branca:
+> [github.com/ctrl-alt-d/solid-patro-repo/tree/Fase1](https://github.com/ctrl-alt-d/solid-patro-repo/tree/Fase1)
+
 ## Objectiu
 
 En aquesta fase es crea l'estructura base del projecte per implementar el patró Repository, separant models, contractes, implementació i proves d'integració.

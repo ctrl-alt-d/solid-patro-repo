@@ -1,5 +1,8 @@
 # Pràctica: patró Repository, lògica de negoci i MVC
 
+> Pràctica disponible a GitHub:
+> https://github.com/ctrl-alt-d/solid-patro-repo
+
 Basat en el document [Implementing the Repository and Unit of Work Patterns in an ASP.NET MVC Application](https://learn.microsoft.com/en-us/aspnet/mvc/overview/older-versions/getting-started-with-ef-5-using-mvc-4/implementing-the-repository-and-unit-of-work-patterns-in-an-asp-net-mvc-application)
 
 > The repository and unit of work patterns are intended to create an abstraction layer between the data access layer and the business logic layer of an application. Implementing these patterns can help insulate your application from changes in the data store and can facilitate automated unit testing or test-driven development (TDD).
@@ -44,6 +47,9 @@ Farem una aplicació [CRUD](https://ca.wikipedia.org/wiki/Crear,_llegir,_actuali
 
 ## Fase 1: repositori i persistència
 
+> Documentació completa fase 1:
+> [github.com/ctrl-alt-d/solid-patro-repo/blob/main/Fase1.md](https://github.com/ctrl-alt-d/solid-patro-repo/blob/main/Fase1.md)
+
 Crearem els projectes on posar estructures de dades i definir les operacions que farem contra la base de dades:
 
 * `DbModels`: Models que utilitza el negoci i que es persistiran a la base de dades (ex: `Alumne`).
@@ -53,11 +59,11 @@ Crearem els projectes on posar estructures de dades i definir les operacions que
 
 Consulta els detalls a [`Fase1.md`](./Fase1.md).
 
-## TDD
-
-Podem fer TDD: fem que VS Code generi la implementació de `Repositori` a partir de `Repositori.Abstractions`, escrivim els tests que fallaran i anem implementant fins que passin.
-
 ## Fase 2
+
+> Documentació completa fase 2:
+> [github.com/ctrl-alt-d/solid-patro-repo/blob/main/Fase2.md](https://github.com/ctrl-alt-d/solid-patro-repo/blob/main/Fase2.md)
+
 
 En aquesta fase farem la capa de negoci. La capa de negoci és la que concentra els casos d'ús. Aquests casos d'ús utilitzen el repositori, però no es corresponen un a un amb les operacions del repositori. Per exemple, tenim una operació de negoci "Promocionar alumne" que sumarà un curs al curs actual fins a arribar a 3r i marcarà com a finalitzat quan ja estigui al darrer curs.
 
@@ -96,6 +102,9 @@ Aquest tall de codi és el cor de l'arquitectura: la regla de promoció està en
 Consulta els detalls a [`Fase2.md`](./Fase2.md).
 
 ## Fase 3: ASP.NET Core MVC
+
+> Documentació completa fase 3:
+> [github.com/ctrl-alt-d/solid-patro-repo/blob/main/Fase3.md](https://github.com/ctrl-alt-d/solid-patro-repo/blob/main/Fase3.md)
 
 En aquesta fase afegim la capa de presentació amb un projecte `Web` basat en ASP.NET Core MVC.
 

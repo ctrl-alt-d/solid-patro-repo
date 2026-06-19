@@ -1,5 +1,8 @@
 # Documentació Fase 2
 
+> Resolució a la branca:
+> [github.com/ctrl-alt-d/solid-patro-repo/tree/Fase2](https://github.com/ctrl-alt-d/solid-patro-repo/tree/Fase2)
+
 ## Objectiu
 
 En aquesta fase farem la capa de negoci. Aquesta capa concentra els casos d'ús de l'aplicació i utilitza el repositori a través de `IRepositoriAlumne`. Fixa't que les operacions de negoci no es corresponen un a un amb les operacions del repositori; per exemple, tenim una operació de negoci "Promocionar alumne" que sumarà un curs al curs actual fins a arribar a 3r i marcarà com a finalitzat quan ja estigui al darrer curs.
